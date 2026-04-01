@@ -29,4 +29,3 @@ app.add_middleware(
 )
 
 app.include_router(health_router)
-
