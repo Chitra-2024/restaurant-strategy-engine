@@ -97,6 +97,32 @@ def generate_recommendations(
     return recommendations
 
 
+def generate_executive_summary(
+    global_score: int,
+    strengths: list[str],
+    weaknesses: list[str],
+) -> str:
+    if global_score >= 75:
+        opening = "Overall customer perception is strong"
+    elif global_score >= 50:
+        opening = "Customer perception is mixed but workable"
+    else:
+        opening = "Customer perception is under pressure"
+
+    strength_text = (
+        f"with {strengths[0]} standing out as a clear advantage"
+        if strengths
+        else "with no single standout strength yet"
+    )
+    weakness_text = (
+        f"while {weaknesses[0]} remains the main operational risk"
+        if weaknesses
+        else "while execution consistency should still be monitored"
+    )
+
+    return f"{opening}, {strength_text}, {weakness_text}."
+
+
 def _describe_aspect(
     aspect_scores: dict[str, dict[str, float | int]],
     aspect_name: str,
@@ -164,6 +190,7 @@ def build_four_ps(analytics_output: dict[str, Any]) -> dict[str, str]:
 def build_strategy(analytics_output: dict[str, Any]) -> dict[str, Any]:
     strengths = list(analytics_output.get("strengths", []))
     weaknesses = list(analytics_output.get("weaknesses", []))
+    global_score = int(analytics_output.get("health_score", 0))
 
     swot = {
         "strengths": strengths,
@@ -173,7 +200,8 @@ def build_strategy(analytics_output: dict[str, Any]) -> dict[str, Any]:
     }
 
     return {
-        "global_score": analytics_output.get("health_score", 0),
+        "global_score": global_score,
+        "executive_summary": generate_executive_summary(global_score, strengths, weaknesses),
         "swot": swot,
         "4ps": build_four_ps(analytics_output),
         "insights": analytics_output.get("insights", []),

@@ -6,6 +6,7 @@ from pymongo import DESCENDING
 
 from app.models.filters import DataFilterRequest
 from app.services.analytics_service import analyze_reviews
+from app.services.cache_service import get_cached_strategy, set_cached_strategy
 from app.services.filter_service import build_review_query
 from app.services.mock_service import generate_mock_reviews
 from app.services.nlp_service import process_reviews
@@ -101,7 +102,9 @@ async def ensure_processed_reviews(
     if filters is None or not (filters.restaurant_name or "").strip():
         return []
 
-    await ingest_reviews_on_demand(db, filters)
+    raw_reviews = await fetch_raw_reviews(db, filters, limit=PROCESSING_BATCH_SIZE)
+    if not raw_reviews:
+        await ingest_reviews_on_demand(db, filters)
     await process_reviews_on_demand(db, filters)
     return await fetch_processed_reviews(db, filters)
 
@@ -110,9 +113,15 @@ async def build_strategy_output(
     db: Any,
     filters: DataFilterRequest | None,
 ) -> dict[str, Any] | None:
+    cached_result = get_cached_strategy(filters)
+    if cached_result is not None:
+        return cached_result
+
     processed_reviews = await ensure_processed_reviews(db, filters)
     if not processed_reviews:
         return None
 
     analytics_output = analyze_reviews(processed_reviews)
-    return build_strategy(analytics_output)
+    strategy_output = build_strategy(analytics_output)
+    set_cached_strategy(filters, strategy_output)
+    return strategy_output

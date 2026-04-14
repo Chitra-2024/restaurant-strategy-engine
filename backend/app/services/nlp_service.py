@@ -4,6 +4,8 @@ import re
 from collections.abc import Iterable
 from typing import Any
 
+from app.services.nlp_model_service import classify_sentiment_with_model
+
 POSITIVE_WORDS = ["good", "great", "amazing", "excellent", "love", "tasty"]
 NEGATIVE_WORDS = ["bad", "slow", "poor", "worst", "late", "overpriced"]
 ASPECT_KEYWORDS = {
@@ -31,6 +33,10 @@ def _contains_keyword(text: str, keyword: str) -> bool:
 
 
 def analyze_sentiment(text: str) -> dict[str, str]:
+    model_result = classify_sentiment_with_model(text)
+    if model_result is not None:
+        return model_result
+
     normalized_text = _normalize_text(text)
     has_positive = any(
         _contains_keyword(normalized_text, word) for word in POSITIVE_WORDS

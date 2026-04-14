@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config.database import connect_to_mongo, disconnect_from_mongo
 from app.routes.analytics import router as analytics_router
+from app.routes.compare import router as compare_router
 from app.routes.export import router as export_router
 from app.routes.health import router as health_router
 from app.routes.ingestion import router as ingestion_router
@@ -41,3 +42,4 @@ app.include_router(analytics_router)
 app.include_router(strategy_router)
 app.include_router(export_router)
 app.include_router(reviews_router)
+app.include_router(compare_router)
