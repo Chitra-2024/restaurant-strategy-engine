@@ -84,7 +84,9 @@ def process_reviews(reviews: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
             "sentiment": sentiment["sentiment"],
             "confidence": confidence["confidence"],
             "restaurant_name": review.get("restaurant_name", ""),
+            "location": review.get("location", ""),
             "timestamp": review.get("timestamp", ""),
+            "source_url": review.get("source_url", ""),
         }
 
         if review.get("_id") is not None:

@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 from pymongo.errors import PyMongoError
 
 from app.config.database import get_database
+from app.services.filter_service import normalize_text
 from app.services.mock_service import generate_mock_reviews
 
 router = APIRouter(tags=["ingestion"])
@@ -13,16 +14,23 @@ logger = logging.getLogger(__name__)
 
 class IngestDataRequest(BaseModel):
     restaurant_name: str = Field(..., min_length=1)
+    location: str | None = Field(default=None)
+    days: int | None = Field(default=None, ge=1, le=365)
 
 
 @router.post("/ingest-data")
 async def ingest_data(payload: IngestDataRequest) -> dict[str, int | str]:
     restaurant_name = payload.restaurant_name.strip()
+    location = normalize_text(payload.location)
     if not restaurant_name:
         raise HTTPException(status_code=400, detail="restaurant_name is required")
 
     # Reddit API temporarily disabled
-    data = await generate_mock_reviews(restaurant_name=restaurant_name)
+    data = await generate_mock_reviews(
+        restaurant_name=restaurant_name,
+        location=location,
+        days=payload.days,
+    )
 
     try:
         db = get_database()

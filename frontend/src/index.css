@@ -2,7 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: Arial, sans-serif;
+@layer base {
+  html {
+    font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+    color: #1f2937;
+  }
+
+  body {
+    min-height: 100vh;
+    background: #fff7ed;
+  }
+
+  #root {
+    min-height: 100vh;
+  }
 }
 
+body {
+  margin: 0;
+}

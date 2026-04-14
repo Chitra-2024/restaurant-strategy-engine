@@ -97,6 +97,70 @@ def generate_recommendations(
     return recommendations
 
 
+def _describe_aspect(
+    aspect_scores: dict[str, dict[str, float | int]],
+    aspect_name: str,
+    positive_text: str,
+    improvement_text: str,
+    neutral_text: str,
+) -> str:
+    details = aspect_scores.get(aspect_name)
+    if not details:
+        return neutral_text
+
+    score = float(details.get("score", 0.0))
+    if score > 0.7:
+        return positive_text
+    if score < 0.4:
+        return improvement_text
+    return neutral_text
+
+
+def build_four_ps(analytics_output: dict[str, Any]) -> dict[str, str]:
+    aspect_scores = analytics_output.get("aspect_scores", {})
+    platform_counts = analytics_output.get("platform_counts", {})
+    locations = analytics_output.get("locations", [])
+    social_mentions = int(platform_counts.get("reddit", 0)) + int(platform_counts.get("twitter", 0))
+
+    if social_mentions >= 4:
+        promotion = "Social mentions are active, giving the brand visible promotion momentum"
+    elif social_mentions > 0:
+        promotion = "Social discussion exists, but promotion can be strengthened with more consistent visibility"
+    else:
+        promotion = "Promotion visibility is limited, so broader awareness efforts may help"
+
+    place_neutral = (
+        f"Place performance is stable across {locations[0]}"
+        if locations
+        else "Place performance is neutral with limited delivery or location feedback"
+    )
+
+    return {
+        "product": _describe_aspect(
+            aspect_scores,
+            "food",
+            "Product is a clear strength with strong food quality feedback",
+            "Product needs attention, especially around food consistency and customer satisfaction",
+            "Product sentiment is balanced, with room to sharpen the menu experience",
+        ),
+        "price": _describe_aspect(
+            aspect_scores,
+            "price",
+            "Price perception is favorable and supports value positioning",
+            "Price perception is weak, so improving value communication may be necessary",
+            "Price sentiment is mixed, suggesting value expectations are not yet consistent",
+        ),
+        "place": _describe_aspect(
+            aspect_scores,
+            "delivery",
+            "Place performance is strong, with reliable delivery and access experience",
+            "Place performance needs improvement, especially around delivery reliability and convenience",
+            place_neutral,
+        ),
+        "promotion": promotion,
+    }
+
+
 def build_strategy(analytics_output: dict[str, Any]) -> dict[str, Any]:
     strengths = list(analytics_output.get("strengths", []))
     weaknesses = list(analytics_output.get("weaknesses", []))
@@ -109,6 +173,11 @@ def build_strategy(analytics_output: dict[str, Any]) -> dict[str, Any]:
     }
 
     return {
+        "global_score": analytics_output.get("health_score", 0),
         "swot": swot,
+        "4ps": build_four_ps(analytics_output),
+        "insights": analytics_output.get("insights", []),
+        "aspect_scores": analytics_output.get("aspect_scores", {}),
+        "summary": analytics_output.get("summary", ""),
         "recommendations": generate_recommendations(strengths, weaknesses),
     }

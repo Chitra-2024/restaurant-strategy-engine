@@ -30,6 +30,54 @@ def aggregate_by_aspect_and_sentiment(
     return {aspect: counts for aspect, counts in aggregation.items()}
 
 
+def collect_aspect_sources(
+    reviews: Iterable[dict[str, Any]],
+) -> dict[str, list[str]]:
+    source_map: dict[str, list[str]] = defaultdict(list)
+
+    for review in reviews:
+        aspect = str(review.get("aspect", "service"))
+        source_url = str(review.get("source_url", "")).strip()
+        if source_url and source_url not in source_map[aspect]:
+            source_map[aspect].append(source_url)
+
+    return {aspect: urls for aspect, urls in source_map.items()}
+
+
+def collect_platform_counts(
+    reviews: Iterable[dict[str, Any]],
+) -> dict[str, int]:
+    platform_counts: dict[str, int] = defaultdict(int)
+
+    for review in reviews:
+        platform = str(review.get("platform", "unknown"))
+        platform_counts[platform] += 1
+
+    return dict(platform_counts)
+
+
+def collect_locations(reviews: Iterable[dict[str, Any]]) -> list[str]:
+    locations = []
+
+    for review in reviews:
+        location = str(review.get("location", "")).strip()
+        if location and location not in locations:
+            locations.append(location)
+
+    return locations
+
+
+def collect_all_sources(reviews: Iterable[dict[str, Any]]) -> list[str]:
+    sources = []
+
+    for review in reviews:
+        source_url = str(review.get("source_url", "")).strip()
+        if source_url and source_url not in sources:
+            sources.append(source_url)
+
+    return sources
+
+
 def _aspect_review_count(counts: dict[str, int]) -> int:
     return (
         counts.get("positive", 0)
@@ -115,23 +163,30 @@ def identify_insights(
 
 def generate_insights(
     aspect_scores: dict[str, dict[str, float | int]],
-) -> list[str]:
-    insights: list[str] = []
+    source_map: dict[str, list[str]],
+    fallback_sources: list[str],
+) -> list[dict[str, Any]]:
+    insights: list[dict[str, Any]] = []
 
     for aspect, details in aspect_scores.items():
         score = float(details["score"])
         aspect_name = aspect.capitalize()
+        source_urls = source_map.get(aspect, [])[:2] or fallback_sources[:1]
 
         if score > 0.7:
-            insights.append(
-                f"{aspect_name} is a strong point with consistently positive feedback"
-            )
+            text = f"{aspect_name} is a strong point with consistently positive feedback"
         elif score < 0.4:
-            insights.append(
-                f"{aspect_name} is a major weakness with frequent complaints"
-            )
+            text = f"{aspect_name} is a major weakness with frequent complaints"
         else:
-            insights.append(f"{aspect_name} shows mixed customer sentiment")
+            text = f"{aspect_name} shows mixed customer sentiment"
+
+        insights.append(
+            {
+                "aspect": aspect,
+                "text": text,
+                "source_urls": source_urls,
+            }
+        )
 
     return insights
 
@@ -164,10 +219,14 @@ def generate_summary(
 def analyze_reviews(reviews: Iterable[dict[str, Any]]) -> dict[str, Any]:
     review_list = list(reviews)
     aggregated_data = aggregate_by_aspect_and_sentiment(review_list)
+    source_map = collect_aspect_sources(review_list)
+    platform_counts = collect_platform_counts(review_list)
+    locations = collect_locations(review_list)
+    fallback_sources = collect_all_sources(review_list)
     aspect_scores = calculate_aspect_scores(aggregated_data)
     insight_groups = identify_insights(aggregated_data, aspect_scores)
     health_score = calculate_health_score(review_list)
-    insights = generate_insights(aspect_scores)
+    insights = generate_insights(aspect_scores, source_map, fallback_sources)
     summary = generate_summary(
         health_score,
         insight_groups["strengths"],
@@ -181,4 +240,6 @@ def analyze_reviews(reviews: Iterable[dict[str, Any]]) -> dict[str, Any]:
         "aspect_scores": aspect_scores,
         "insights": insights,
         "summary": summary,
+        "platform_counts": platform_counts,
+        "locations": locations,
     }
