@@ -35,6 +35,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/")
+async def root():
+    return {"status": "healthy", "message": "Restaurant Strategy Engine API is running"}
+
 app.include_router(health_router)
 app.include_router(ingestion_router)
 app.include_router(processing_router)
