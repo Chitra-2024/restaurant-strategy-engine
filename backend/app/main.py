@@ -43,3 +43,10 @@ app.include_router(strategy_router)
 app.include_router(export_router)
 app.include_router(reviews_router)
 app.include_router(compare_router)
+
+import os
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 10000))
+    uvicorn.run("app.main:app", host="0.0.0.0", port=port)
